@@ -1,2 +1,2 @@
 # Control-de-Ingresos
-App privada para control de ingresos y gastos. Con gráfica, saldo, metas y sincronización en la nube.
+Proyecto personal - Dashboard Financiero | Firebase, JS, GitHub Pages - CRUD en tiempo real, filtros por periodo y gráficas dinámicas
