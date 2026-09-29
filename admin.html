@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONTROL DE INGRESOS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}
+body{background:#0a0a0a;color:#fff;min-height:100vh;overflow:hidden}
+.login{height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+.login input{padding:16px 20px;border-radius:12px;border:1px solid #333;background:#1a1a1a;color:#fff;width:300px;font-size:16px}
+.login button{padding:14px 32px;border-radius:12px;border:0;background:#fff;color:#000;font-weight:bold;cursor:pointer}
+.app{display:none;width:96%;max-width:1600px;margin:0 auto;padding:10px 0;height:100vh;flex-direction:column;overflow:hidden}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-shrink:0}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;flex-shrink:0}
+.card{background:#1a1a1a;padding:12px 16px;border-radius:14px;text-align:center}
+.card b{display:block;font-size:20px;margin-top:2px}
+.card.saldo b{color:#22c55e}
+.layout{display:grid;grid-template-columns:1.6fr 0.9fr;gap:10px;flex:1;min-height:0;align-items:stretch}
+.left{display:flex;flex-direction:column;gap:10px;min-height:0}
+.right{display:flex;flex-direction:column;min-height:0;height:100%}
+.filtros{background:#1a1a1a;padding:12px 14px;border-radius:14px;flex-shrink:0}
+.filtros h3{font-size:12px;opacity:.6;margin-bottom:6px}
+.filtros-botones{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.filtros-botones button{padding:6px 12px;border-radius:20px;border:1px solid #333;background:#0a0a0a;color:#fff;cursor:pointer;font-size:12px}
+.filtros-botones button.activo{background:#fff;color:#000;border-color:#fff;font-weight:bold}
+.filtros-fechas{display:none;gap:8px;align-items:center}
+.filtros-fechas.activo{display:flex}
+.filtros-fechas input{padding:6px;border-radius:8px;border:1px solid #333;background:#0a0a0a;color:#fff}
+.resumen-periodo{background:#111;padding:8px 10px;border-radius:10px;margin-top:6px;display:flex;justify-content:space-between;font-size:11px}
+.grafica-box{background:#1a1a1a;padding:10px 14px;border-radius:14px;flex:1;min-height:0;display:flex;flex-direction:column}
+.grafica-box canvas{flex:1;width:100%!important;height:100%!important;min-height:0}
+.form{background:#1a1a1a;padding:10px;border-radius:14px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.form select,.form input{padding:10px 12px;border-radius:10px;border:1px solid #333;background:#0a0a0a;color:#fff;flex:1;min-width:90px;font-size:13px}
+.form button{padding:10px 16px;border-radius:10px;border:0;background:#22c55e;color:#000;font-weight:bold;cursor:pointer}
+.lista-box{background:#1a1a1a;padding:12px;border-radius:14px;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#lista{flex:1;overflow:auto;min-height:0}
+.mov{background:#0f0f0f;padding:10px 12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px}
+.mov.gasto{border-left:3px solid #ef4444}.mov.ingreso{border-left:3px solid #22c55e}
+.monto button{margin-left:10px;background:#2e2e2e;color:#fff;border:0;border-radius:50%;width:20px;height:20px;cursor:pointer}
+.bottom-bar{display:grid;grid-template-columns:1.6fr 0.9fr;gap:10px;margin-top:8px;flex-shrink:0}
+.btn-sync{width:100%;padding:12px;background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:12px;cursor:pointer}
+@media(max-width:1000px){body{overflow:auto}.app{height:auto}.layout{grid-template-columns:1fr}.bottom-bar{grid-template-columns:1fr}.grafica-box{height:300px;flex:none}}
+</style>
+</head>
+<body>
+<div id="login-screen" class="login">
+  <h2>Proyecto Privado</h2>
+  <p style="opacity:.6">Ingresa la contraseña para acceder</p>
+  <input id="pass-input" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter') verificarPassword()">
+  <button onclick="verificarPassword()">Entrar</button>
+</div>
+<div id="app-screen" class="app">
+  <div class="top-bar"><h2>CONTROL DE INGRESOS</h2><div style="display:flex;gap:10px;align-items:center"><span id="estado-nube" class="estado"></span><button onclick="abrirAjustes()" style="background:#1a1a1a;border:1px solid #333;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer">⚙</button></div></div>
+  <div class="cards"><div class="card">INGRESOS<b id="total-ingresos">$0.00</b></div><div class="card">GASTOS<b id="total-gastos" style="color:#ef4444">$0.00</b></div><div class="card saldo">SALDO<b id="total-saldo">$0.00</b></div></div>
+  <div class="layout"><div class="left"><div class="filtros"><h3>📅 VER GANANCIAS</h3><div class="filtros-botones"><button onclick="setFiltro('hoy')" id="btn-hoy" class="activo">Hoy</button><button onclick="setFiltro('semana')" id="btn-semana">Semana</button><button onclick="setFiltro('mes')" id="btn-mes">Mes</button><button onclick="setFiltro('todo')" id="btn-todo">Todo</button><button onclick="setFiltro('custom')" id="btn-custom">Personalizado</button></div><div id="fechas-custom" class="filtros-fechas"><input type="date" id="fecha-desde"> a <input type="date" id="fecha-hasta"><button onclick="aplicarCustom()" style="padding:10px 14px;border-radius:8px;border:0;background:#22c55e;color:#000;font-weight:bold">Ver</button></div><div class="resumen-periodo"><span>Periodo: <b id="periodo-label">Hoy</b></span><span>Ganancia: <b id="ganancia-periodo" style="color:#22c55e">$0.00</b></span></div></div><div class="grafica-box"><h3 id="titulo-grafica">📈 Hoy por horas</h3><canvas id="grafica"></canvas></div></div><div class="right"><div class="lista-box"><h3 style="font-size:14px;opacity:.7;margin-bottom:12px">Movimientos</h3><div id="lista"></div></div></div></div>
+  <div class="bottom-bar"><form id="form-mov" class="form"><select id="tipo"><option value="ingreso">Ingreso</option><option value="gasto">Gasto</option></select><input id="concepto" placeholder="Concepto" required><input id="monto" type="number" step="0.01" placeholder="$0" required><button id="btn-agregar" type="submit">Agregar</button></form><button class="btn-sync" onclick="cargarNube()">🔄 Sincronizar</button></div>
+</div>
+<div id="modal-ajustes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;padding:20px"><div style="background:#1a1a1a;border:1px solid #333;padding:22px;border-radius:16px;width:100%;max-width:360px"><h3>⚙ Ajustes</h3><label style="font-size:12px;opacity:.6">Mínimo</label><input id="input-minimo" type="number" style="width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#0a0a0a;color:#fff;margin-top:6px"><label style="font-size:12px;opacity:.6;display:block;margin-top:12px">Meta</label><input id="input-meta" type="number" style="width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#0a0a0a;color:#fff;margin-top:6px"><div style="display:flex;gap:10px;margin-top:18px"><button onclick="cerrarAjustes()" style="flex:1;padding:12px;border-radius:10px;border:0;background:#2a2a2a;color:#fff;cursor:pointer">Cancelar</button><button onclick="guardarAjustes()" style="flex:1;padding:12px;border-radius:10px;border:0;background:#22c55e;color:#000;font-weight:bold;cursor:pointer">Guardar</button></div></div></div>
+<script src="modelo.js"></script>
+</body>
+</html>
