@@ -31,7 +31,7 @@ body{background:#0a0a0a;color:#fff;min-height:100vh;overflow:hidden}
 .resumen-periodo{background:#111;padding:8px 10px;border-radius:10px;margin-top:6px;display:flex;justify-content:space-between;font-size:11px}
 .grafica-box{background:#1a1a1a;padding:10px 14px;border-radius:14px;flex:1;min-height:0;display:flex;flex-direction:column}
 .grafica-box canvas{flex:1;width:100%!important;height:100%!important;min-height:0}
-.form{background:#1a1a1a;padding:10px;border-radius:14px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;align-items:center}
+.form{background:#1a1a1a;padding:10px;border-radius:14px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
 .form select,.form input{padding:10px 12px;border-radius:10px;border:1px solid #333;background:#0a0a0a;color:#fff;flex:1;min-width:90px;font-size:13px}
 .form button{padding:10px 16px;border-radius:10px;border:0;background:#22c55e;color:#000;font-weight:bold;cursor:pointer}
 .lista-box{background:#1a1a1a;padding:12px;border-radius:14px;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
@@ -41,10 +41,6 @@ body{background:#0a0a0a;color:#fff;min-height:100vh;overflow:hidden}
 .monto button{margin-left:10px;background:#2e2e2e;color:#fff;border:0;border-radius:50%;width:20px;height:20px;cursor:pointer}
 .bottom-bar{display:grid;grid-template-columns:1.6fr 0.9fr;gap:10px;margin-top:8px;flex-shrink:0}
 .btn-sync{width:100%;padding:12px;background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:12px;cursor:pointer}
-#fecha-mov{flex-basis:100%;display:none;margin-top:2px}
-#fecha-mov.activo{display:block}
-#btn-fecha{background:#0a0a0a!important;border:1px solid #333!important;color:#fff!important;flex:0!important;min-width:44px!important}
-#btn-fecha.activo{background:#fff!important;color:#000!important;border-color:#fff!important}
 @media(max-width:1000px){body{overflow:auto}.app{height:auto}.layout{grid-template-columns:1fr}.bottom-bar{grid-template-columns:1fr}.grafica-box{height:300px;flex:none}}
 </style>
 </head>
@@ -59,17 +55,7 @@ body{background:#0a0a0a;color:#fff;min-height:100vh;overflow:hidden}
   <div class="top-bar"><h2>CONTROL DE INGRESOS</h2><div style="display:flex;gap:10px;align-items:center"><span id="estado-nube" class="estado"></span><button onclick="abrirAjustes()" style="background:#1a1a1a;border:1px solid #333;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer">⚙</button></div></div>
   <div class="cards"><div class="card">INGRESOS<b id="total-ingresos">$0.00</b></div><div class="card">GASTOS<b id="total-gastos" style="color:#ef4444">$0.00</b></div><div class="card saldo">SALDO<b id="total-saldo">$0.00</b></div></div>
   <div class="layout"><div class="left"><div class="filtros"><h3>📅 VER GANANCIAS</h3><div class="filtros-botones"><button onclick="setFiltro('hoy')" id="btn-hoy" class="activo">Hoy</button><button onclick="setFiltro('semana')" id="btn-semana">Semana</button><button onclick="setFiltro('mes')" id="btn-mes">Mes</button><button onclick="setFiltro('todo')" id="btn-todo">Todo</button><button onclick="setFiltro('custom')" id="btn-custom">Personalizado</button></div><div id="fechas-custom" class="filtros-fechas"><input type="date" id="fecha-desde"> a <input type="date" id="fecha-hasta"><button onclick="aplicarCustom()" style="padding:10px 14px;border-radius:8px;border:0;background:#22c55e;color:#000;font-weight:bold">Ver</button></div><div class="resumen-periodo"><span>Periodo: <b id="periodo-label">Hoy</b></span><span>Ganancia: <b id="ganancia-periodo" style="color:#22c55e">$0.00</b></span></div></div><div class="grafica-box"><h3 id="titulo-grafica">📈 Hoy por horas</h3><canvas id="grafica"></canvas></div></div><div class="right"><div class="lista-box"><h3 style="font-size:14px;opacity:.7;margin-bottom:12px">Movimientos</h3><div id="lista"></div></div></div></div>
-  <div class="bottom-bar">
-    <form id="form-mov" class="form">
-      <select id="tipo"><option value="ingreso">Ingreso</option><option value="gasto">Gasto</option></select>
-      <input id="concepto" placeholder="Concepto" required>
-      <input id="monto" type="number" step="0.01" placeholder="$0" required>
-      <button type="button" id="btn-fecha" onclick="toggleFecha()" title="Ajustar fecha y hora">🕒</button>
-      <button id="btn-agregar" type="submit">Agregar</button>
-      <input type="datetime-local" id="fecha-mov" placeholder="Fecha y hora">
-    </form>
-    <button class="btn-sync" onclick="cargarNube()">🔄 Sincronizar</button>
-  </div>
+  <div class="bottom-bar"><form id="form-mov" class="form"><select id="tipo"><option value="ingreso">Ingreso</option><option value="gasto">Gasto</option></select><input id="concepto" placeholder="Concepto" required><input id="monto" type="number" step="0.01" placeholder="$0" required><button id="btn-agregar" type="submit">Agregar</button></form><button class="btn-sync" onclick="cargarNube()">🔄 Sincronizar</button></div>
 </div>
 <div id="modal-ajustes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;padding:20px"><div style="background:#1a1a1a;border:1px solid #333;padding:22px;border-radius:16px;width:100%;max-width:360px"><h3>⚙ Ajustes</h3><label style="font-size:12px;opacity:.6">Mínimo</label><input id="input-minimo" type="number" style="width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#0a0a0a;color:#fff;margin-top:6px"><label style="font-size:12px;opacity:.6;display:block;margin-top:12px">Meta</label><input id="input-meta" type="number" style="width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#0a0a0a;color:#fff;margin-top:6px"><div style="display:flex;gap:10px;margin-top:18px"><button onclick="cerrarAjustes()" style="flex:1;padding:12px;border-radius:10px;border:0;background:#2a2a2a;color:#fff;cursor:pointer">Cancelar</button><button onclick="guardarAjustes()" style="flex:1;padding:12px;border-radius:10px;border:0;background:#22c55e;color:#000;font-weight:bold;cursor:pointer">Guardar</button></div></div></div>
 <script src="modelo.js"></script>
