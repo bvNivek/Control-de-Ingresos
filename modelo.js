@@ -20,54 +20,77 @@ async function sha256(str) {
 }
 const PASSWORD_HASH = "d87c87b2a681cf50f6c5dff7e36700d4082cf04c6f779d8f7c2c1cc94ceb86a4";
 
-// --- CAMBIO 1: CARGAR DE LA NUBE COMPARTIDA ---
 async function cargarNube() {
   try {
+    if(!window.dbTools ||!window.colRef){
+      mostrarEstado("Local","ok");
+      cargando=false;
+      render();
+      return;
+    }
     const { onSnapshot } = window.dbTools;
     onSnapshot(window.colRef, (snap) => {
-      movimientos = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+      movimientos = snap.docs.map(d => ({ id: d.id,...d.data() })).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
       cargando = false;
       render();
       mostrarEstado("Compartido ✓","ok");
     });
-  } catch (e) { 
+  } catch (e) {
     console.error(e);
     mostrarEstado("Error conectando","error");
     cargando = false;
     render();
   }
 }
-
-// --- YA NO SE USA, AHORA TODO VA DIRECTO A FIREBASE ---
-async function guardarNube() {
-  render();
-}
-
+async function guardarNube() { render(); }
 function mostrarEstado(msg, tipo){
   const el = document.getElementById("estado-nube");
   if(el){ el.textContent = msg; el.className = "estado "+tipo; setTimeout(()=>el.textContent="",3000); }
 }
 
-// --- CAMBIO 2: GUARDAR EN LA NUBE COMPARTIDA ---
-async function agregarMovimiento(tipo, concepto, monto){
-  if(!concepto || !monto) return;
-  const { addDoc } = window.dbTools;
-  await addDoc(window.colRef, {tipo, concepto, monto:parseFloat(monto), fecha:new Date().toISOString()});
+// --- CON FECHA OPCIONAL ---
+async function agregarMovimiento(tipo, concepto, monto, fechaElegidaISO){
+  if(!concepto ||!monto) return;
+  let fechaFinal;
+  if(fechaElegidaISO){
+    fechaFinal = new Date(fechaElegidaISO).toISOString();
+  } else {
+    const inputFecha = document.getElementById("fecha-mov");
+    if(inputFecha && inputFecha.value){
+      fechaFinal = new Date(inputFecha.value).toISOString();
+    } else {
+      fechaFinal = new Date().toISOString();
+    }
+  }
+  if(window.dbTools && window.colRef){
+    const { addDoc } = window.dbTools;
+    await addDoc(window.colRef, {tipo, concepto, monto:parseFloat(monto), fecha:fechaFinal});
+  } else {
+    movimientos.unshift({id: Date.now().toString(), tipo, concepto, monto:parseFloat(monto), fecha:fechaFinal});
+    render();
+  }
 }
-
-async function eliminarMovimiento(id){ 
-  const { deleteDoc, doc, db } = window.dbTools;
-  await deleteDoc(doc(db, "movimientos", id)); 
+async function eliminarMovimiento(id){
+  if(window.dbTools){
+    const { deleteDoc, doc, db } = window.dbTools;
+    await deleteDoc(doc(db, "movimientos", id));
+  } else {
+    movimientos = movimientos.filter(m=>m.id!==id);
+    render();
+  }
 }
-
 async function limpiarMovimientos(){
   if(movimientos.length===0) return;
-  if(confirm(`¿Borrar TODOS los ${movimientos.length} movimientos? Esto lo borra para los dos.`)){
-    const { getDocs, writeBatch } = window.dbTools;
-    const snap = await getDocs(window.colRef);
-    const batch = writeBatch(window.dbTools.db);
-    snap.forEach(d => batch.delete(d.ref));
-    await batch.commit();
+  if(confirm(`¿Borrar TODOS los ${movimientos.length} movimientos?`)){
+    if(window.dbTools){
+      const { getDocs, writeBatch } = window.dbTools;
+      const snap = await getDocs(window.colRef);
+      const batch = writeBatch(window.dbTools.db);
+      snap.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    } else {
+      movimientos=[]; render();
+    }
   }
 }
 window.limpiarMovimientos = limpiarMovimientos;
@@ -109,7 +132,7 @@ function actualizarGrafica(){
   } else {
     const {inicio, fin} = obtenerRangoFiltro();
     const diff = Math.ceil((fin-inicio)/(1000*60*60*24));
-    const maxDias = filtroActual==='todo' ? 30 : Math.min(diff, 31);
+    const maxDias = filtroActual==='todo'? 30 : Math.min(diff, 31);
     const mapaIng = {}, mapaGas = {};
     for(let i=maxDias-1;i>=0;i--){
       const d = new Date(); if(filtroActual!=='todo') d.setTime(fin.getTime()); else { d.setDate(new Date().getDate()-i); }
@@ -173,7 +196,7 @@ function setFiltro(tipo){
 function aplicarCustom(){
   const d = document.getElementById('fecha-desde').value;
   const h = document.getElementById('fecha-hasta').value;
-  if(!d || !h){ alert('Selecciona ambas fechas'); return; }
+  if(!d ||!h){ alert('Selecciona ambas fechas'); return; }
   rangoCustom.desde = d; rangoCustom.hasta = h; render();
 }
 async function verificarPassword(){
@@ -184,25 +207,58 @@ async function verificarPassword(){
     cargarNube();
   } else { alert("Contraseña incorrecta"); }
 }
+function toggleFecha(){
+  const input = document.getElementById("fecha-mov");
+  const btn = document.getElementById("btn-fecha");
+  if(!input) return;
+  if(input.classList.contains("activo")){
+    input.classList.remove("activo");
+    input.style.display="none";
+    btn?.classList.remove("activo");
+    input.value="";
+  } else {
+    input.classList.add("activo");
+    input.style.display="block";
+    btn?.classList.add("activo");
+    const ahora = new Date();
+    const offset = ahora.getTimezoneOffset();
+    const local = new Date(ahora.getTime() - offset*60000).toISOString().slice(0,16);
+    if(!input.value) input.value = local;
+    input.focus();
+  }
+}
 window.agregarMovimiento = agregarMovimiento;
 window.eliminarMovimiento = eliminarMovimiento;
 window.verificarPassword = verificarPassword;
 window.cargarNube = cargarNube;
 window.setFiltro = setFiltro;
 window.aplicarCustom = aplicarCustom;
+window.toggleFecha = toggleFecha;
 document.addEventListener("DOMContentLoaded", ()=>{
   const form = document.getElementById("form-mov");
   if(form){
     form.addEventListener("submit", (e)=>{
       e.preventDefault();
-      agregarMovimiento(document.getElementById("tipo").value, document.getElementById("concepto").value, document.getElementById("monto").value);
+      const tipoEl = document.getElementById("tipo");
+      const conceptoEl = document.getElementById("concepto");
+      const montoEl = document.getElementById("monto");
+      const fechaEl = document.getElementById("fecha-mov");
+      agregarMovimiento(tipoEl.value, conceptoEl.value, montoEl.value, fechaEl? fechaEl.value : null);
       form.reset();
+      if(fechaEl){
+        fechaEl.classList.remove("activo");
+        fechaEl.style.display="none";
+        fechaEl.value="";
+      }
+      document.getElementById("btn-fecha")?.classList.remove("activo");
     });
   }
   document.getElementById("btn-agregar")?.addEventListener("click", (e)=>{
+    const form = document.getElementById("form-mov");
     if(form) return;
     e.preventDefault();
-    agregarMovimiento(document.getElementById("tipo").value, document.getElementById("concepto").value, document.getElementById("monto").value);
+    const fechaEl = document.getElementById("fecha-mov");
+    agregarMovimiento(document.getElementById("tipo").value, document.getElementById("concepto").value, document.getElementById("monto").value, fechaEl? fechaEl.value : null);
   });
 });
 function abrirAjustes(){
