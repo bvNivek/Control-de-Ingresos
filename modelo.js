@@ -179,7 +179,14 @@ function render(){
   document.getElementById("total-gastos").textContent = `$${gastos.toFixed(2)}`;
   const elSal = document.getElementById("total-saldo"); elSal.textContent = `$${saldo.toFixed(2)}`; elSal.style.color = saldo < LIMITE_INFERIOR? '#ef4444' : '#22c55e';
   const label = document.getElementById("periodo-label"); if(label){ if(filtroActual==='hoy') label.textContent = 'Hoy'; else if(filtroActual==='semana') label.textContent = 'Esta semana'; else if(filtroActual==='mes') label.textContent = 'Este mes'; else if(filtroActual==='todo') label.textContent = 'Todo'; else label.textContent = `${inicio.toLocaleDateString()} - ${fin.toLocaleDateString()}`; }
-  const gan = document.getElementById("ganancia-periodo"); if(gan) gan.textContent = `$${saldo.toFixed(2)}`;
+  
+  // --- AQUÍ EL FIX ---
+  const gan = document.getElementById("ganancia-periodo"); 
+  if(gan){ 
+    gan.textContent = `$${saldo.toFixed(2)}`;
+    gan.style.color = saldo >= 0 ? '#22c55e' : '#ef4444';
+  }
+  
   if(cargando){ lista.innerHTML = "<p class='vacio'>Cargando...</p>"; return; }
   if(filtrados.length===0){ lista.innerHTML = `<p class='vacio'>Sin movimientos en este periodo.<br><small>Total histórico: $${totalesGenerales.saldo.toFixed(2)}</small></p>`; }
   else { lista.innerHTML = filtrados.map(m=>`<div class="mov ${m.tipo}"><div><strong>${m.concepto}</strong><br><small>${new Date(m.fecha).toLocaleString()}</small></div><div class="monto ${m.tipo}">${m.tipo==="gasto"?"-":"+"}$${m.monto.toFixed(2)} <button onclick="eliminarMovimiento('${m.id}')">x</button></div></div>`).join(""); }
